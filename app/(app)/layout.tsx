@@ -1,4 +1,5 @@
 import Sidebar from "@/components/Sidebar";
+import BottomNav from "@/components/BottomNav";
 import { getSessao } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -29,11 +30,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         />
       </div>
 
-      <Sidebar />
+      {/* Sidebar: only on md+ */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
 
       <main className="flex-1 relative z-10 overflow-auto">
-        <div className="p-8 max-w-[1400px]">{children}</div>
+        <div className="p-4 pb-24 md:p-8 md:pb-8 max-w-[1400px]">{children}</div>
       </main>
+
+      {/* Bottom nav: only on mobile */}
+      <BottomNav />
     </div>
   );
 }

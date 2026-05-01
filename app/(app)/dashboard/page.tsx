@@ -43,7 +43,7 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">
+        <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
           Olá, {sessao?.nome?.split(" ")[0]}
         </h1>
         <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
         {stats.map((s) => (
           <div
             key={s.label}
-            className="rounded-2xl p-5 transition-all duration-200 hover:scale-[1.02]"
+            className="rounded-2xl p-4 md:p-5 transition-all duration-200 hover:scale-[1.02]"
             style={{
               background: "rgba(255,255,255,0.04)",
               border: `1px solid rgba(255,255,255,0.08)`,
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
             >
               <s.icon size={19} style={{ color: s.cor }} />
             </div>
-            <p className="text-3xl font-bold text-white tracking-tight">{s.valor}</p>
+            <p className="text-2xl md:text-3xl font-bold text-white tracking-tight">{s.valor}</p>
             <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>{s.label}</p>
           </div>
         ))}

@@ -350,7 +350,7 @@ function ModalProjeto({ config, materiais, arquivos, editando, onClose, onSave }
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0" style={{ borderTop: "none" }}>
           {/* Left: Form */}
-          <div className="p-6 space-y-4" style={{ borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="p-4 md:p-6 space-y-4" style={{ borderRight: "1px solid rgba(255,255,255,0.06)" }}>
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.35)" }}>Dados do Projeto</p>
 
             <div>
@@ -472,7 +472,7 @@ function ModalProjeto({ config, materiais, arquivos, editando, onClose, onSave }
           </div>
 
           {/* Right: Calculadora */}
-          <div className="p-6" style={{ background: "rgba(255,255,255,0.02)" }}>
+          <div className="p-4 md:p-6" style={{ background: "rgba(255,255,255,0.02)" }}>
             <CalculadoraPanel config={config} custoPorKg={material?.custoPorKg ?? 0}
               pesoGramas={pesoNum} tempoHoras={horasNum} tempoMinutos={minutosNum} ready={calcReady} />
           </div>
