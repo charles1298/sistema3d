@@ -8,6 +8,7 @@ import {
   FileBox,
   LogOut,
   Calculator,
+  Settings,
 } from "lucide-react";
 
 const links = [
@@ -15,6 +16,7 @@ const links = [
   { href: "/projetos", label: "Projetos", icon: FolderOpen },
   { href: "/arquivos", label: "Arquivos", icon: FileBox },
   { href: "/precificacao", label: "Precificação", icon: Calculator },
+  { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 export default function Sidebar() {
