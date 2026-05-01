@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import Image from "next/image";
 import {
   LayoutDashboard,
   FolderOpen,
@@ -38,9 +37,7 @@ export default function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5">
-        <div className="relative w-9 h-9 shrink-0">
-          <Image src="/logo.png" alt="3D Sistema" fill className="object-contain drop-shadow-lg" />
-        </div>
+        <img src="/logo.png" alt="3D Sistema" className="w-9 h-9 object-contain" />
         <div>
           <p className="text-sm font-bold text-white leading-tight tracking-tight">3D Sistema</p>
           <p className="text-[11px] leading-tight mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>

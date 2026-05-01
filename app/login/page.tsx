@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Loader2 } from "lucide-react";
-import Image from "next/image";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -78,9 +77,7 @@ export default function LoginPage() {
         className="absolute top-0 left-0 right-0 flex items-center justify-between px-8 py-5"
       >
         <div className="flex items-center gap-2.5">
-          <div className="relative w-8 h-8 shrink-0">
-            <Image src="/logo.png" alt="3D Sistema" fill className="object-contain drop-shadow-lg" />
-          </div>
+          <img src="/logo.png" alt="3D Sistema" className="w-8 h-8 object-contain" />
           <span className="text-white font-semibold text-sm tracking-tight">3D Sistema</span>
         </div>
         <div className="text-xs text-white/30 font-medium">Bambu Lab A1 Mini</div>
