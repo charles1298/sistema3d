@@ -17,8 +17,12 @@ export async function DELETE(
 
   try {
     await unlink(path.join(process.cwd(), "public", "uploads", arquivo.nome));
-  } catch {
-    // arquivo pode nao existir mais no disco
+  } catch { /* arquivo pode nao existir mais no disco */ }
+
+  if (arquivo.thumbnailNome) {
+    try {
+      await unlink(path.join(process.cwd(), "public", "uploads", "thumbs", arquivo.thumbnailNome));
+    } catch { /* thumbnail pode nao existir */ }
   }
 
   await prisma.arquivo.delete({ where: { id } });

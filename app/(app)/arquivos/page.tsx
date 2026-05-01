@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Upload, FileBox, Download, Trash2, X } from "lucide-react";
+import { Upload, FileBox, Download, Trash2, X, FileCode2, Box } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Arquivo = {
   id: string;
@@ -9,6 +10,7 @@ type Arquivo = {
   nome: string;
   tamanho: number;
   tipo: string;
+  thumbnailNome: string | null;
   enviadoEm: string;
   projeto: { nome: string; cor: string } | null;
   usuario: { nome: string };
@@ -22,11 +24,16 @@ function formatarTamanho(bytes: number) {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-const cardStyle = {
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  backdropFilter: "blur(12px)",
-};
+function ext(nome: string) {
+  return nome.split(".").pop()?.toUpperCase() ?? "";
+}
+
+function is3mf(nome: string) {
+  return nome.toLowerCase().endsWith(".3mf");
+}
+
+const inputClass = "w-full px-3.5 py-2.5 rounded-xl text-sm text-white placeholder:text-white/20 outline-none transition-all duration-200";
+const inputStyle = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" };
 
 export default function ArquivosPage() {
   const [arquivos, setArquivos] = useState<Arquivo[]>([]);
@@ -53,11 +60,11 @@ export default function ArquivosPage() {
 
   async function enviarArquivo(e: React.FormEvent) {
     e.preventDefault();
-    if (!arquivo || !projetoId) return;
+    if (!arquivo) return;
     setEnviando(true);
     const formData = new FormData();
     formData.append("arquivo", arquivo);
-    formData.append("projetoId", projetoId);
+    if (projetoId) formData.append("projetoId", projetoId);
     await fetch("/api/arquivos", { method: "POST", body: formData });
     setEnviando(false);
     setModal(false);
@@ -79,19 +86,14 @@ export default function ArquivosPage() {
     if (file) setArquivo(file);
   }
 
-  const is3mf = (nome: string) => nome.toLowerCase().endsWith(".3mf");
-
-  const inputClass = "w-full px-3.5 py-2.5 rounded-xl text-sm text-white placeholder:text-white/20 outline-none transition-all duration-200";
-  const inputStyle = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" };
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Arquivos</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Arquivos</h1>
           <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
-            Arquivos .3mf e modelos do Bambu Studio
+            Modelos .3mf e arquivos do Bambu Studio
           </p>
         </div>
         <button
@@ -103,7 +105,8 @@ export default function ArquivosPage() {
           }}
         >
           <Upload size={16} />
-          Enviar Arquivo
+          <span className="hidden sm:inline">Enviar Arquivo</span>
+          <span className="sm:hidden">Enviar</span>
         </button>
       </div>
 
@@ -112,236 +115,279 @@ export default function ArquivosPage() {
           Carregando...
         </div>
       ) : arquivos.length === 0 ? (
-        <div
-          className="flex flex-col items-center justify-center py-20 rounded-2xl"
-          style={cardStyle}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-24 rounded-2xl"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
         >
           <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: "rgba(255,255,255,0.06)" }}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+            style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.2)" }}
           >
-            <FileBox size={24} style={{ color: "rgba(255,255,255,0.3)" }} />
+            <Box size={28} style={{ color: "#A78BFA" }} />
           </div>
-          <p className="text-white/70 font-medium">Nenhum arquivo enviado</p>
-          <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>
-            Envie arquivos .3mf do Bambu Studio
+          <p className="text-white/70 font-semibold">Nenhum arquivo enviado</p>
+          <p className="text-sm mt-1.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+            Envie seus arquivos .3mf do Bambu Studio
           </p>
-        </div>
+          <button
+            onClick={() => setModal(true)}
+            className="mt-5 flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl cursor-pointer transition-all"
+            style={{ background: "rgba(124,58,237,0.2)", color: "#A78BFA", border: "1px solid rgba(124,58,237,0.3)" }}
+          >
+            <Upload size={15} /> Enviar primeiro arquivo
+          </button>
+        </motion.div>
       ) : (
-        <div className="rounded-2xl overflow-hidden" style={cardStyle}>
-          <table className="w-full">
-            <thead>
-              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
-                <th className="text-left text-xs font-semibold uppercase tracking-wide px-6 py-3" style={{ color: "rgba(255,255,255,0.35)" }}>Arquivo</th>
-                <th className="text-left text-xs font-semibold uppercase tracking-wide px-4 py-3" style={{ color: "rgba(255,255,255,0.35)" }}>Projeto</th>
-                <th className="text-left text-xs font-semibold uppercase tracking-wide px-4 py-3" style={{ color: "rgba(255,255,255,0.35)" }}>Enviado por</th>
-                <th className="text-left text-xs font-semibold uppercase tracking-wide px-4 py-3" style={{ color: "rgba(255,255,255,0.35)" }}>Tamanho</th>
-                <th className="text-left text-xs font-semibold uppercase tracking-wide px-4 py-3" style={{ color: "rgba(255,255,255,0.35)" }}>Data</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {arquivos.map((arq) => (
-                <tr
-                  key={arq.id}
-                  className="transition-colors"
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <AnimatePresence>
+            {arquivos.map((arq, i) => (
+              <motion.div
+                key={arq.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: i * 0.04 }}
+                className="group relative rounded-2xl overflow-hidden flex flex-col"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  backdropFilter: "blur(12px)",
+                }}
+              >
+                {/* Thumbnail / preview area */}
+                <div
+                  className="relative w-full aspect-square overflow-hidden"
+                  style={{ background: "rgba(0,0,0,0.3)" }}
                 >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: is3mf(arq.nomeOriginal) ? "rgba(124,58,237,0.2)" : "rgba(255,255,255,0.06)" }}
-                      >
-                        <FileBox size={16} style={{ color: is3mf(arq.nomeOriginal) ? "#A78BFA" : "rgba(255,255,255,0.4)" }} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">{arq.nomeOriginal}</p>
-                        {is3mf(arq.nomeOriginal) && (
-                          <span className="text-xs font-medium" style={{ color: "#A78BFA" }}>Bambu Studio</span>
-                        )}
-                      </div>
+                  {arq.thumbnailNome ? (
+                    <img
+                      src={`/uploads/thumbs/${arq.thumbnailNome}`}
+                      alt={arq.nomeOriginal}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                      {is3mf(arq.nomeOriginal) ? (
+                        <Box size={32} style={{ color: "rgba(167,139,250,0.5)" }} />
+                      ) : (
+                        <FileCode2 size={32} style={{ color: "rgba(255,255,255,0.2)" }} />
+                      )}
+                      <span className="text-xs font-bold tracking-wider" style={{ color: "rgba(255,255,255,0.2)" }}>
+                        {ext(arq.nomeOriginal)}
+                      </span>
                     </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    {arq.projeto ? (
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: arq.projeto.cor }} />
-                        <span className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>{arq.projeto.nome}</span>
+                  )}
+
+                  {/* Badge de formato */}
+                  <div
+                    className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider"
+                    style={
+                      is3mf(arq.nomeOriginal)
+                        ? { background: "rgba(124,58,237,0.85)", color: "#E9D5FF" }
+                        : { background: "rgba(0,0,0,0.6)", color: "rgba(255,255,255,0.5)" }
+                    }
+                  >
+                    {ext(arq.nomeOriginal)}
+                  </div>
+
+                  {/* Hover actions */}
+                  <div
+                    className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    style={{ background: "rgba(0,0,0,0.55)" }}
+                  >
+                    <a
+                      href={`/uploads/${arq.nome}`}
+                      download={arq.nomeOriginal}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition-all"
+                      style={{ background: "rgba(124,58,237,0.8)", color: "white" }}
+                      title="Download"
+                    >
+                      <Download size={15} />
+                    </a>
+                    <button
+                      onClick={() => deletarArquivo(arq.id)}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition-all"
+                      style={{ background: "rgba(239,68,68,0.7)", color: "white" }}
+                      title="Remover"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="p-3 flex flex-col gap-1">
+                  <p
+                    className="text-xs font-semibold text-white truncate"
+                    title={arq.nomeOriginal}
+                  >
+                    {arq.nomeOriginal.replace(/\.[^.]+$/, "")}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                      {formatarTamanho(arq.tamanho)}
+                    </span>
+                    {arq.projeto && (
+                      <div className="flex items-center gap-1">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ backgroundColor: arq.projeto.cor }}
+                        />
+                        <span className="text-[10px] truncate max-w-[70px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                          {arq.projeto.nome}
+                        </span>
                       </div>
-                    ) : (
-                      <span className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>—</span>
                     )}
-                  </td>
-                  <td className="px-4 py-4 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>{arq.usuario.nome}</td>
-                  <td className="px-4 py-4 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>{formatarTamanho(arq.tamanho)}</td>
-                  <td className="px-4 py-4 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
-                    {new Date(arq.enviadoEm).toLocaleDateString("pt-BR")}
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-1.5 justify-end">
-                      <a
-                        href={`/uploads/${arq.nome}`}
-                        download={arq.nomeOriginal}
-                        className="p-2 rounded-lg transition-all cursor-pointer"
-                        style={{ color: "rgba(255,255,255,0.35)" }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLElement).style.color = "#A78BFA";
-                          (e.currentTarget as HTMLElement).style.background = "rgba(124,58,237,0.15)";
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.35)";
-                          (e.currentTarget as HTMLElement).style.background = "transparent";
-                        }}
-                        title="Download"
-                      >
-                        <Download size={15} />
-                      </a>
-                      <button
-                        onClick={() => deletarArquivo(arq.id)}
-                        className="p-2 rounded-lg transition-all cursor-pointer"
-                        style={{ color: "rgba(255,255,255,0.35)" }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLElement).style.color = "#F87171";
-                          (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.12)";
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.35)";
-                          (e.currentTarget as HTMLElement).style.background = "transparent";
-                        }}
-                        title="Remover"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                  <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                    {arq.usuario.nome} · {new Date(arq.enviadoEm).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       )}
 
       {/* Modal Upload */}
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setModal(false)} />
-          <div
-            className="relative rounded-2xl w-full max-w-md p-6"
-            style={{
-              background: "rgba(10,8,20,0.95)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              backdropFilter: "blur(24px)",
-              boxShadow: "0 32px 64px rgba(0,0,0,0.6)",
-            }}
+      <AnimatePresence>
+        {modal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-base font-semibold text-white">Enviar Arquivo</h2>
-              <button
-                onClick={() => setModal(false)}
-                className="p-1.5 rounded-lg transition-all cursor-pointer"
-                style={{ color: "rgba(255,255,255,0.4)" }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.color = "white";
-                  (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.4)";
-                  (e.currentTarget as HTMLElement).style.background = "transparent";
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={enviarArquivo} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>
-                  Projeto
-                </label>
-                <select
-                  value={projetoId}
-                  onChange={(e) => setProjetoId(e.target.value)}
-                  required
-                  className={inputClass}
-                  style={inputStyle}
-                >
-                  <option value="" style={{ background: "#0F0F1A" }}>Selecione um projeto</option>
-                  {projetos.map((p) => (
-                    <option key={p.id} value={p.id} style={{ background: "#0F0F1A" }}>{p.nome}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>
-                  Arquivo
-                </label>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setArrastando(true); }}
-                  onDragLeave={() => setArrastando(false)}
-                  onDrop={handleDrop}
-                  onClick={() => inputRef.current?.click()}
-                  className="rounded-2xl p-8 text-center cursor-pointer transition-all"
-                  style={{
-                    border: arrastando ? "2px dashed #7C3AED" : "2px dashed rgba(255,255,255,0.12)",
-                    background: arrastando ? "rgba(124,58,237,0.1)" : "rgba(255,255,255,0.03)",
-                  }}
-                >
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3"
-                    style={{ background: "rgba(255,255,255,0.06)" }}
-                  >
-                    <Upload size={20} style={{ color: "rgba(255,255,255,0.4)" }} />
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setModal(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              className="relative rounded-2xl w-full max-w-md p-6"
+              style={{
+                background: "rgba(10,8,20,0.97)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                backdropFilter: "blur(24px)",
+                boxShadow: "0 32px 64px rgba(0,0,0,0.7)",
+              }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "rgba(124,58,237,0.2)" }}>
+                    <Upload size={15} style={{ color: "#A78BFA" }} />
                   </div>
-                  {arquivo ? (
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: "#A78BFA" }}>{arquivo.name}</p>
-                      <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>{formatarTamanho(arquivo.size)}</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>Arraste um arquivo aqui ou clique</p>
-                      <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>Suporte a .3mf, .gcode, .stl e outros</p>
-                    </div>
-                  )}
-                  <input
-                    ref={inputRef}
-                    type="file"
-                    accept=".3mf,.gcode,.stl,.obj,.step"
-                    onChange={(e) => setArquivo(e.target.files?.[0] || null)}
-                    className="hidden"
-                  />
+                  <h2 className="text-base font-semibold text-white">Enviar Arquivo</h2>
                 </div>
+                <button
+                  onClick={() => setModal(false)}
+                  className="p-1.5 rounded-lg transition-all cursor-pointer"
+                  style={{ color: "rgba(255,255,255,0.4)" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "white"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.4)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                >
+                  <X size={18} />
+                </button>
               </div>
 
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setModal(false)}
-                  className="flex-1 py-2.5 text-sm font-medium rounded-xl transition-all cursor-pointer"
-                  style={{ border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)" }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={enviando || !arquivo}
-                  className="flex-1 py-2.5 text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
-                  style={{
-                    background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
-                    boxShadow: "0 4px 16px rgba(109,40,217,0.35)",
-                  }}
-                >
-                  {enviando ? "Enviando..." : "Enviar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              <form onSubmit={enviarArquivo} className="space-y-4">
+                {/* Drop zone */}
+                <div>
+                  <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    Arquivo
+                  </label>
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setArrastando(true); }}
+                    onDragLeave={() => setArrastando(false)}
+                    onDrop={handleDrop}
+                    onClick={() => inputRef.current?.click()}
+                    className="rounded-2xl p-7 text-center cursor-pointer transition-all"
+                    style={{
+                      border: arrastando ? "2px dashed #7C3AED" : "2px dashed rgba(255,255,255,0.1)",
+                      background: arrastando ? "rgba(124,58,237,0.1)" : "rgba(255,255,255,0.02)",
+                    }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3"
+                      style={{ background: "rgba(124,58,237,0.15)" }}
+                    >
+                      <Box size={20} style={{ color: "#A78BFA" }} />
+                    </div>
+                    {arquivo ? (
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: "#A78BFA" }}>{arquivo.name}</p>
+                        <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>{formatarTamanho(arquivo.size)}</p>
+                        {is3mf(arquivo.name) && (
+                          <p className="text-xs mt-1.5" style={{ color: "rgba(167,139,250,0.6)" }}>
+                            Thumbnail será extraído automaticamente
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>
+                          Arraste ou clique para selecionar
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>
+                          .3mf · .gcode · .stl · .obj e outros
+                        </p>
+                      </div>
+                    )}
+                    <input
+                      ref={inputRef}
+                      type="file"
+                      accept=".3mf,.gcode,.stl,.obj,.step,.amf"
+                      onChange={(e) => setArquivo(e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+
+                {/* Projeto (opcional) */}
+                <div>
+                  <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    Projeto <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400, textTransform: "none" }}>(opcional)</span>
+                  </label>
+                  <select
+                    value={projetoId}
+                    onChange={(e) => setProjetoId(e.target.value)}
+                    className={inputClass}
+                    style={inputStyle}
+                  >
+                    <option value="" style={{ background: "#0F0F1A" }}>Sem projeto</option>
+                    {projetos.map((p) => (
+                      <option key={p.id} value={p.id} style={{ background: "#0F0F1A" }}>{p.nome}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setModal(false)}
+                    className="flex-1 py-2.5 text-sm font-medium rounded-xl transition-all cursor-pointer"
+                    style={{ border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={enviando || !arquivo}
+                    className="flex-1 py-2.5 text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 relative overflow-hidden"
+                    style={{
+                      background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
+                      boxShadow: "0 4px 16px rgba(109,40,217,0.35)",
+                    }}
+                  >
+                    {enviando ? "Enviando..." : "Enviar"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

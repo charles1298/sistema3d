@@ -63,13 +63,14 @@ model ProjetoMembro {
 }
 
 model Arquivo {
-  id           String   @id @default(cuid())
-  nome         String
-  nomeOriginal String
-  tamanho      Int
-  tipo         String
-  projetoId    String?
-  usuarioId    String
+  id            String   @id @default(cuid())
+  nome          String
+  nomeOriginal  String
+  tamanho       Int
+  tipo          String
+  thumbnailNome String?
+  projetoId     String?
+  usuarioId     String
   projeto          Projeto?   @relation("ArquivosProjeto", fields: [projetoId], references: [id], onDelete: SetNull)
   projetoVinculado Projeto[]  @relation("ProjetoArquivoVinculado")
   usuario          Usuario  @relation(fields: [usuarioId], references: [id])
