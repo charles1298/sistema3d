@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Printer, ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -77,8 +78,8 @@ export default function LoginPage() {
         className="absolute top-0 left-0 right-0 flex items-center justify-between px-8 py-5"
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-600/40">
-            <Printer size={15} className="text-white" />
+          <div className="relative w-8 h-8 shrink-0">
+            <Image src="/logo.png" alt="3D Sistema" fill className="object-contain drop-shadow-lg" />
           </div>
           <span className="text-white font-semibold text-sm tracking-tight">3D Sistema</span>
         </div>

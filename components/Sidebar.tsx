@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   LayoutDashboard,
   FolderOpen,
   FileBox,
   LogOut,
-  Printer,
   Calculator,
 } from "lucide-react";
 
@@ -38,14 +38,8 @@ export default function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5">
-        <div
-          className="relative flex items-center justify-center w-9 h-9 rounded-xl shadow-lg"
-          style={{
-            background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
-            boxShadow: "0 4px 16px rgba(109,40,217,0.5)",
-          }}
-        >
-          <Printer size={17} className="text-white" />
+        <div className="relative w-9 h-9 shrink-0">
+          <Image src="/logo.png" alt="3D Sistema" fill className="object-contain drop-shadow-lg" />
         </div>
         <div>
           <p className="text-sm font-bold text-white leading-tight tracking-tight">3D Sistema</p>
