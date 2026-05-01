@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Usuario {
+  id       String   @id @default(cuid())
+  nome     String
+  email    String   @unique
+  senha    String
+  role     String   @default("membro")
+  cor      String   @default("#00AE68")
+  criadoEm DateTime @default(now())
+
+  projetosCriados Projeto[]
+  membros         ProjetoMembro[]
+  arquivos        Arquivo[]
+}
+
+model Projeto {
+  id              String   @id @default(cuid())
+  nome            String
+  descricao       String?
+  cor             String   @default("#00AE68")
+  impressaoStatus String   @default("rascunho")
+
+  // Dados de impressão + precificação
+  materialId       String?
+  material         Material? @relation(fields: [materialId], references: [id])
+  pesoGramas       Float     @default(0)
+  tempoHoras       Int       @default(0)
+  tempoMinutos     Int       @default(0)
+  custoMaterial    Float     @default(0)
+  custoOperacional Float     @default(0)
+  custoTotal       Float     @default(0)
+  precoVenda       Float     @default(0)
+
+  // Arquivo vinculado principal
+  arquivoVinculadoId String?
+  arquivoVinculado   Arquivo? @relation("ProjetoArquivoVinculado", fields: [arquivoVinculadoId], references: [id])
+
+  criadoPorId  String
+  criadoPor    Usuario  @relation(fields: [criadoPorId], references: [id])
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  membros  ProjetoMembro[]
+  arquivos Arquivo[]       @relation("ArquivosProjeto")
+}
+
+model ProjetoMembro {
+  id        String  @id @default(cuid())
+  projetoId String
+  usuarioId String
+  projeto   Projeto @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([projetoId, usuarioId])
+}
+
+model Arquivo {
+  id           String   @id @default(cuid())
+  nome         String
+  nomeOriginal String
+  tamanho      Int
+  tipo         String
+  projetoId    String?
+  usuarioId    String
+  projeto          Projeto?   @relation("ArquivosProjeto", fields: [projetoId], references: [id], onDelete: SetNull)
+  projetoVinculado Projeto[]  @relation("ProjetoArquivoVinculado")
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+  enviadoEm        DateTime @default(now())
+}
+
+// ─── Módulo de Precificação (Configuração Global + Catálogo de Materiais) ──────
+
+model Configuracao {
+  id              String @id @default("global")
+  valorImpressora Float  @default(2899)
+  vidaUtilHoras   Float  @default(5000)
+  custoManutencao Float  @default(0.32)
+  margemLucro     Float  @default(40)
+}
+
+model Material {
+  id         String    @id @default(cuid())
+  nome       String
+  custoPorKg Float
+  criadoEm   DateTime  @default(now())
+  projetos   Projeto[]
+}
