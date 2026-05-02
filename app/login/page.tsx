@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Loader2 } from "lucide-react";
+import ParticlesCanvas from "@/components/ParticlesCanvas";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -12,17 +13,6 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
-
-  const particles = useMemo(() =>
-    Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      left: `${(i * 5.3 + 4) % 96}%`,
-      top: `${(i * 7.1 + 3) % 94}%`,
-      size: (i % 3) + 1.5,
-      delay: i * 0.35,
-      duration: 7 + (i % 6) * 1.5,
-    })), []
-  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,6 +38,8 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#07070F]">
+
+      <ParticlesCanvas count={100} />
 
       {/* Animated gradient orbs */}
       <div className="absolute inset-0 pointer-events-none">
@@ -85,37 +77,6 @@ export default function LoginPage() {
           backgroundSize: "48px 48px",
         }}
       />
-
-      {/* Floating particles */}
-      {mounted && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {particles.map((p) => (
-            <motion.div
-              key={p.id}
-              className="absolute rounded-full"
-              style={{
-                left: p.left,
-                top: p.top,
-                width: p.size,
-                height: p.size,
-                background: "rgba(167,139,250,0.7)",
-                boxShadow: "0 0 8px rgba(167,139,250,0.5)",
-              }}
-              animate={{
-                y: [0, -28, 0],
-                opacity: [0.15, 0.75, 0.15],
-                scale: [1, 1.5, 1],
-              }}
-              transition={{
-                duration: p.duration,
-                repeat: Infinity,
-                delay: p.delay,
-                ease: "easeInOut",
-              }}
-            />
-          ))}
-        </div>
-      )}
 
       {/* Horizontal accent lines */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">

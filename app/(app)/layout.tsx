@@ -1,5 +1,6 @@
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import ParticlesCanvas from "@/components/ParticlesCanvas";
 import { getSessao } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -9,6 +10,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-[#07070F]">
+      <ParticlesCanvas count={70} />
+
       {/* Ambient orbs — fixed behind everything */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div
