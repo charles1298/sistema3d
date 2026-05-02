@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { getSessao } from "@/lib/auth";
 import { FolderOpen, CheckCircle2, Clock, TrendingUp } from "lucide-react";
+import DashboardCharts from "@/components/DashboardCharts";
 
 export default async function DashboardPage() {
   const sessao = await getSessao();
 
-  const [totalProjetos, totalRascunho, totalProduzido, ultimosProjetos] =
+  const [totalProjetos, totalRascunho, totalProduzido, ultimosProjetos, todosProjetos, todosArquivos] =
     await Promise.all([
       prisma.projeto.count(),
       prisma.projeto.count({ where: { impressaoStatus: "rascunho" } }),
@@ -18,6 +19,11 @@ export default async function DashboardPage() {
           material: { select: { nome: true } },
         },
       }),
+      prisma.projeto.findMany({
+        select: { criadoEm: true, precoVenda: true, impressaoStatus: true },
+        orderBy: { criadoEm: "asc" },
+      }),
+      prisma.arquivo.findMany({ select: { tipo: true, nome: true } }),
     ]);
 
   const receitaProjetada = await prisma.projeto.aggregate({
@@ -26,6 +32,43 @@ export default async function DashboardPage() {
   });
 
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  // ── Chart data ───────────────────────────────────────────────────────────────
+
+  const now = new Date();
+  const mesesData = Array.from({ length: 6 }, (_, i) => {
+    const start = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() - (5 - i) + 1, 0, 23, 59, 59);
+    const label = start.toLocaleString("pt-BR", { month: "short" });
+    const mes = label.charAt(0).toUpperCase() + label.slice(1).replace(".", "");
+    const bucket = todosProjetos.filter((p) => {
+      const d = new Date(p.criadoEm);
+      return d >= start && d <= end;
+    });
+    return {
+      mes,
+      projetos: bucket.length,
+      receita: bucket.filter((p) => p.impressaoStatus === "produzido").reduce((s, p) => s + p.precoVenda, 0),
+    };
+  });
+
+  const statusData = [
+    { name: "Rascunho", value: totalRascunho, fill: "#FCD34D" },
+    { name: "Produzido", value: totalProduzido, fill: "#34D399" },
+  ];
+
+  const tiposMap: Record<string, number> = {};
+  for (const a of todosArquivos) {
+    const t = a.tipo.toLowerCase();
+    const key = t.includes("3mf") || a.nome.endsWith(".3mf")
+      ? "3MF" : t.includes("gcode") || a.nome.endsWith(".gcode")
+      ? "GCODE" : t.includes("stl") || a.nome.endsWith(".stl")
+      ? "STL" : "Outros";
+    tiposMap[key] = (tiposMap[key] ?? 0) + 1;
+  }
+  const tiposData = Object.entries(tiposMap).map(([name, value]) => ({ name, value }));
+
+  // ── Static UI ────────────────────────────────────────────────────────────────
 
   const stats = [
     { label: "Total de Projetos", valor: String(totalProjetos), icon: FolderOpen, cor: "#A78BFA" },
@@ -41,7 +84,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
           Olá, {sessao?.nome?.split(" ")[0]}
@@ -65,10 +107,7 @@ export default async function DashboardPage() {
               boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
             }}
           >
-            <div
-              className="flex items-center justify-center w-10 h-10 rounded-xl mb-4"
-              style={{ backgroundColor: s.cor + "20" }}
-            >
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl mb-4" style={{ backgroundColor: s.cor + "20" }}>
               <s.icon size={19} style={{ color: s.cor }} />
             </div>
             <p className="text-2xl md:text-3xl font-bold text-white tracking-tight">{s.valor}</p>
@@ -76,6 +115,9 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Charts */}
+      <DashboardCharts mesesData={mesesData} tiposData={tiposData} statusData={statusData} />
 
       {/* Recent projects */}
       <div

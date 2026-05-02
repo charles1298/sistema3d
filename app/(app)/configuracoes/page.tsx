@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { KeyRound, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { KeyRound, Eye, EyeOff, CheckCircle2, Cloud, Printer } from "lucide-react";
 
 const inputCls = "w-full px-3.5 py-2.5 rounded-xl text-sm text-white outline-none transition-all duration-200 placeholder:text-white/25";
 const inputStyle = {
@@ -75,6 +75,40 @@ export default function ConfiguracoesPage() {
         <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
           Gerencie suas preferências de conta
         </p>
+      </div>
+
+      {/* R2 Storage info */}
+      <div className="rounded-2xl p-5 space-y-3" style={card}>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(96,165,250,0.15)" }}>
+            <Cloud size={17} style={{ color: "#60A5FA" }} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Armazenamento</p>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Cloudflare R2 ou local</p>
+          </div>
+        </div>
+        <div className="rounded-xl px-4 py-3 text-xs space-y-1.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <p style={{ color: "rgba(255,255,255,0.5)" }}>Para ativar o Cloudflare R2, adicione essas variáveis de ambiente no Railway:</p>
+          {["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME", "NEXT_PUBLIC_STORAGE_URL"].map((v) => (
+            <code key={v} className="block px-2 py-1 rounded-lg font-mono" style={{ background: "rgba(255,255,255,0.06)", color: "#A78BFA" }}>
+              {v}
+            </code>
+          ))}
+        </div>
+      </div>
+
+      {/* Bambu info */}
+      <div className="rounded-2xl p-5" style={card}>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(52,211,153,0.15)" }}>
+            <Printer size={17} style={{ color: "#34D399" }} />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-white">Bambu Lab</p>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Configure em <span style={{ color: "#A78BFA" }}>Impressora</span> no menu lateral</p>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-2xl p-6 space-y-5" style={card}>

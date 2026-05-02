@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessao } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
+import { uploadFile } from "@/lib/storage";
 import path from "path";
-import { randomUUID } from "crypto";
 import AdmZip from "adm-zip";
 
 const THUMB_PATHS = [
@@ -14,20 +13,17 @@ const THUMB_PATHS = [
   "Thumbnail/thumbnail.png",
 ];
 
-async function extrairThumbnail3mf(buffer: Buffer, thumbDir: string): Promise<string | null> {
+async function extrairThumbnail3mf(buffer: Buffer): Promise<string | null> {
   try {
     const zip = new AdmZip(buffer);
     for (const tentativa of THUMB_PATHS) {
       const entry = zip.getEntry(tentativa);
       if (entry) {
-        const thumbNome = `${randomUUID()}.png`;
-        await writeFile(path.join(thumbDir, thumbNome), entry.getData());
-        return thumbNome;
+        const { nome } = await uploadFile(entry.getData(), "png", "uploads/thumbs");
+        return nome;
       }
     }
-  } catch {
-    // not a valid zip or no thumbnail found
-  }
+  } catch { }
   return null;
 }
 
@@ -50,32 +46,23 @@ export async function POST(req: NextRequest) {
   const file = formData.get("arquivo") as File;
   const projetoId = (formData.get("projetoId") as string) || null;
 
-  if (!file) {
-    return NextResponse.json({ erro: "Arquivo obrigatorio" }, { status: 400 });
-  }
+  if (!file) return NextResponse.json({ erro: "Arquivo obrigatorio" }, { status: 400 });
 
-  const ext = path.extname(file.name).toLowerCase();
-  const nomeUnico = `${randomUUID()}${ext}`;
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
-  const thumbDir = path.join(process.cwd(), "public", "uploads", "thumbs");
-
-  await mkdir(uploadDir, { recursive: true });
-  await mkdir(thumbDir, { recursive: true });
-
+  const ext = path.extname(file.name).replace(".", "").toLowerCase() || "bin";
   const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, nomeUnico), buffer);
+  const { nome } = await uploadFile(buffer, ext, "uploads");
 
   let thumbnailNome: string | null = null;
-  if (ext === ".3mf") {
-    thumbnailNome = await extrairThumbnail3mf(buffer, thumbDir);
+  if (ext === "3mf") {
+    thumbnailNome = await extrairThumbnail3mf(buffer);
   }
 
   const arquivo = await prisma.arquivo.create({
     data: {
-      nome: nomeUnico,
+      nome,
       nomeOriginal: file.name,
       tamanho: file.size,
-      tipo: file.type || ext.replace(".", ""),
+      tipo: file.type || ext,
       thumbnailNome,
       projetoId: projetoId || undefined,
       usuarioId: sessao.id,

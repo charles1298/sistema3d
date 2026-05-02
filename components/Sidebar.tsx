@@ -9,12 +9,14 @@ import {
   LogOut,
   Calculator,
   Settings,
+  Printer,
 } from "lucide-react";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projetos", label: "Projetos", icon: FolderOpen },
   { href: "/arquivos", label: "Arquivos", icon: FileBox },
+  { href: "/impressora", label: "Impressora", icon: Printer },
   { href: "/precificacao", label: "Precificação", icon: Calculator },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];

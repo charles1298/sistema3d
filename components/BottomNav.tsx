@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, FolderOpen, FileBox, Calculator, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, FolderOpen, FileBox, Printer, Settings, LogOut } from "lucide-react";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projetos", label: "Projetos", icon: FolderOpen },
   { href: "/arquivos", label: "Arquivos", icon: FileBox },
-  { href: "/precificacao", label: "Preços", icon: Calculator },
+  { href: "/impressora", label: "Impressora", icon: Printer },
   { href: "/configuracoes", label: "Config", icon: Settings },
 ];
 

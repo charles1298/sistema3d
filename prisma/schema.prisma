@@ -19,6 +19,7 @@ model Usuario {
   projetosCriados Projeto[]
   membros         ProjetoMembro[]
   arquivos        Arquivo[]
+  fotos           FotoProjeto[]
 }
 
 model Projeto {
@@ -50,6 +51,7 @@ model Projeto {
 
   membros  ProjetoMembro[]
   arquivos Arquivo[]       @relation("ArquivosProjeto")
+  fotos    FotoProjeto[]
 }
 
 model ProjetoMembro {
@@ -79,12 +81,27 @@ model Arquivo {
 
 // ─── Módulo de Precificação (Configuração Global + Catálogo de Materiais) ──────
 
+model FotoProjeto {
+  id           String   @id @default(cuid())
+  projetoId    String
+  projeto      Projeto  @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+  nome         String
+  nomeOriginal String
+  tamanho      Int
+  usuarioId    String
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
+  criadoEm    DateTime @default(now())
+}
+
 model Configuracao {
-  id              String @id @default("global")
-  valorImpressora Float  @default(2899)
-  vidaUtilHoras   Float  @default(5000)
-  custoManutencao Float  @default(0.32)
-  margemLucro     Float  @default(40)
+  id              String  @id @default("global")
+  valorImpressora Float   @default(2899)
+  vidaUtilHoras   Float   @default(5000)
+  custoManutencao Float   @default(0.32)
+  margemLucro     Float   @default(40)
+  bambuEmail      String?
+  bambuToken      String?
+  bambuTokenExp   String?
 }
 
 model Material {

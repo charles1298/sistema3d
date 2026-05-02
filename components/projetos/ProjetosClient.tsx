@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, X, Pencil, Trash2, ChevronLeft, CheckCircle2, Clock,
   Package, TrendingUp, Calculator, FolderOpen, AlertTriangle, FileBox,
+  Camera, Upload, ZoomIn,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -559,6 +560,145 @@ function ProjetoCard({ projeto, onView, onEdit, onDelete, onToggleStatus }: {
   );
 }
 
+// ─── FotoGaleria ─────────────────────────────────────────────────────────────
+
+type Foto = { id: string; nome: string; nomeOriginal: string; tamanho: number; criadoEm: string; usuario: { nome: string } };
+
+function FotoGaleria({ projetoId }: { projetoId: string }) {
+  const [fotos, setFotos] = useState<Foto[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [enviando, setEnviando] = useState(false);
+  const [zoom, setZoom] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const base = (process.env.NEXT_PUBLIC_STORAGE_URL ?? "");
+
+  useEffect(() => {
+    fetch(`/api/projetos/${projetoId}/fotos`)
+      .then((r) => r.json())
+      .then((d) => setFotos(Array.isArray(d) ? d : []))
+      .finally(() => setCarregando(false));
+  }, [projetoId]);
+
+  async function enviarFoto(files: FileList | null) {
+    if (!files?.length) return;
+    setEnviando(true);
+    for (const file of Array.from(files)) {
+      const fd = new FormData();
+      fd.append("foto", file);
+      const res = await fetch(`/api/projetos/${projetoId}/fotos`, { method: "POST", body: fd });
+      if (res.ok) {
+        const nova = await res.json();
+        setFotos((prev) => [...prev, nova]);
+      }
+    }
+    setEnviando(false);
+  }
+
+  async function deletarFoto(fotoId: string, nome: string) {
+    if (!confirm(`Remover "${nome}"?`)) return;
+    const res = await fetch(`/api/projetos/${projetoId}/fotos/${fotoId}`, { method: "DELETE" });
+    if (res.ok) setFotos((prev) => prev.filter((f) => f.id !== fotoId));
+  }
+
+  function fotoUrl(nome: string) {
+    return base ? `${base}/uploads/fotos/${nome}` : `/uploads/fotos/${nome}`;
+  }
+
+  return (
+    <div className="rounded-2xl p-6 space-y-4" style={card}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Camera size={15} style={{ color: "#A78BFA" }} />
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.35)" }}>
+            Fotos do Resultado
+          </p>
+        </div>
+        <button
+          onClick={() => inputRef.current?.click()}
+          disabled={enviando}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl transition-all cursor-pointer disabled:opacity-50"
+          style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.3)", color: "#A78BFA" }}
+        >
+          <Upload size={12} />
+          {enviando ? "Enviando..." : "Adicionar Foto"}
+        </button>
+        <input ref={inputRef} type="file" accept="image/*" multiple className="hidden"
+          onChange={(e) => enviarFoto(e.target.files)} />
+      </div>
+
+      {carregando ? (
+        <div className="flex justify-center py-8">
+          <div className="w-6 h-6 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+        </div>
+      ) : fotos.length === 0 ? (
+        <div
+          className="flex flex-col items-center justify-center py-10 rounded-xl border-2 border-dashed cursor-pointer transition-all"
+          style={{ borderColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }}
+          onClick={() => inputRef.current?.click()}
+        >
+          <Camera size={28} className="mb-2 opacity-40" />
+          <p className="text-sm">Clique para adicionar fotos do resultado</p>
+          <p className="text-xs mt-0.5 opacity-60">JPG, PNG, WEBP</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {fotos.map((foto) => (
+            <motion.div key={foto.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              className="relative group aspect-square rounded-xl overflow-hidden cursor-pointer"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+              onClick={() => setZoom(fotoUrl(foto.nome))}
+            >
+              <img src={fotoUrl(foto.nome)} alt={foto.nomeOriginal}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                <button className="p-1.5 rounded-lg cursor-pointer" style={{ background: "rgba(255,255,255,0.15)" }}
+                  onClick={(e) => { e.stopPropagation(); setZoom(fotoUrl(foto.nome)); }}>
+                  <ZoomIn size={14} className="text-white" />
+                </button>
+                <button className="p-1.5 rounded-lg cursor-pointer" style={{ background: "rgba(239,68,68,0.3)" }}
+                  onClick={(e) => { e.stopPropagation(); deletarFoto(foto.id, foto.nomeOriginal); }}>
+                  <Trash2 size={14} className="text-red-400" />
+                </button>
+              </div>
+            </motion.div>
+          ))}
+          <div
+            className="aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all hover:border-violet-500/40"
+            style={{ borderColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.25)" }}
+            onClick={() => inputRef.current?.click()}
+          >
+            <Plus size={20} />
+            <span className="text-[10px] mt-1">Adicionar</span>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {zoom && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={() => setZoom(null)}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
+            <motion.img
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              src={zoom} alt="Foto ampliada"
+              className="relative max-w-full max-h-[85vh] rounded-2xl object-contain"
+              style={{ boxShadow: "0 32px 80px rgba(0,0,0,0.8)" }}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button className="absolute top-4 right-4 p-2 rounded-xl cursor-pointer z-10"
+              style={{ background: "rgba(255,255,255,0.1)" }} onClick={() => setZoom(null)}>
+              <X size={18} className="text-white" />
+            </button>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── ProjetoDetalhe ───────────────────────────────────────────────────────────
 
 function ProjetoDetalhe({ projeto, config, onEdit, onDelete, onToggleStatus, onBack }: {
@@ -612,6 +752,8 @@ function ProjetoDetalhe({ projeto, config, onEdit, onDelete, onToggleStatus, onB
           {projeto.descricao && <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>{projeto.descricao}</p>}
         </div>
       </div>
+
+      <FotoGaleria projetoId={projeto.id} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-2xl p-6 space-y-4" style={card}>

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessao } from "@/lib/auth";
-import { unlink } from "fs/promises";
-import path from "path";
+import { deleteFile } from "@/lib/storage";
 
 export async function DELETE(
   _req: NextRequest,
@@ -15,14 +14,9 @@ export async function DELETE(
   const arquivo = await prisma.arquivo.findUnique({ where: { id } });
   if (!arquivo) return NextResponse.json({ erro: "Nao encontrado" }, { status: 404 });
 
-  try {
-    await unlink(path.join(process.cwd(), "public", "uploads", arquivo.nome));
-  } catch { /* arquivo pode nao existir mais no disco */ }
-
+  await deleteFile(arquivo.nome, "uploads");
   if (arquivo.thumbnailNome) {
-    try {
-      await unlink(path.join(process.cwd(), "public", "uploads", "thumbs", arquivo.thumbnailNome));
-    } catch { /* thumbnail pode nao existir */ }
+    await deleteFile(arquivo.thumbnailNome, "uploads/thumbs");
   }
 
   await prisma.arquivo.delete({ where: { id } });
