@@ -51,12 +51,14 @@ export async function bambuLogin(
   }
 
   if (data.loginType === "verifyCode") {
-    // Dispara o envio do e-mail com o código
-    await fetch(`${BASE}/v1/user-service/user/sendemail/code`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, type: "codeType" }),
-    }).catch(() => { /* ignora erro de rede aqui */ });
+    if (!verifyCode) {
+      // Só envia o e-mail na primeira vez (sem código ainda)
+      await fetch(`${BASE}/v1/user-service/user/sendemail/code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, type: "codeType" }),
+      }).catch(() => {});
+    }
     return { ok: false, needsCode: true };
   }
 
