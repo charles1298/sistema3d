@@ -53,11 +53,15 @@ export async function bambuLogin(
   if (data.loginType === "verifyCode") {
     if (!verifyCode) {
       // Só envia o e-mail na primeira vez (sem código ainda)
-      await fetch(`${BASE}/v1/user-service/user/sendemail/code`, {
+      const emailRes = await fetch(`${BASE}/v1/user-service/user/sendemail/code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, type: "codeType" }),
-      }).catch(() => {});
+        body: JSON.stringify({ email, codeType: "verifyCode" }),
+      }).catch(() => null);
+      console.log("[BAMBU] sendemail status:", emailRes?.status ?? "fetch failed");
+    } else {
+      // Log da resposta ao submeter o código para diagnóstico
+      console.log("[BAMBU] submitCode response:", JSON.stringify(data));
     }
     return { ok: false, needsCode: true };
   }
