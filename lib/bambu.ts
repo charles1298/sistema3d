@@ -10,22 +10,33 @@ export type BambuDevice = {
   dev_model_name?: string;
 };
 
-export async function bambuLogin(email: string, password: string): Promise<{ token: string; expIso: string }> {
+export type BambuLoginResult =
+  | { ok: true; token: string; expIso: string }
+  | { ok: false; needsCode: true };
+
+export async function bambuLogin(
+  email: string,
+  password: string,
+  verifyCode?: string,
+): Promise<BambuLoginResult> {
   const ctrl = new AbortController();
   const timeout = setTimeout(() => ctrl.abort(), 12_000);
+
+  const body: Record<string, string> = { account: email, password, apiError: "" };
+  if (verifyCode) body.verifyCode = verifyCode;
 
   let res: Response;
   try {
     res = await fetch(`${BASE}/v1/user-service/user/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ account: email, password, apiError: "" }),
+      body: JSON.stringify(body),
       signal: ctrl.signal,
     });
   } catch (err: unknown) {
     clearTimeout(timeout);
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("abort") || msg.includes("Abort")) throw new Error("Timeout ao conectar com Bambu Lab");
+    if (msg.toLowerCase().includes("abort")) throw new Error("Timeout ao conectar com Bambu Lab");
     throw new Error(`Erro de conexão: ${msg}`);
   }
   clearTimeout(timeout);
@@ -39,7 +50,7 @@ export async function bambuLogin(email: string, password: string): Promise<{ tok
   }
 
   if (data.loginType === "verifyCode") {
-    throw new Error("Bambu enviou um código de verificação para seu e-mail. Contas com verificação em duas etapas não são suportadas pelo monitor automático.");
+    return { ok: false, needsCode: true };
   }
 
   const token = (data.accessToken ?? data.token) as string | undefined;
@@ -48,7 +59,7 @@ export async function bambuLogin(email: string, password: string): Promise<{ tok
   }
 
   const exp = new Date(Date.now() + 29 * 24 * 60 * 60 * 1000).toISOString();
-  return { token, expIso: exp };
+  return { ok: true, token, expIso: exp };
 }
 
 export async function bambuGetDevices(token: string): Promise<BambuDevice[]> {

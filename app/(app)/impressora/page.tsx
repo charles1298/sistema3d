@@ -68,6 +68,8 @@ export default function ImpressoraPage() {
   const [conectando, setConectando] = useState(false);
   const [erro, setErro] = useState("");
   const [ultimaAtt, setUltimaAtt] = useState<Date | null>(null);
+  const [precisaCodigo, setPrecisaCodigo] = useState(false);
+  const [codigo, setCodigo] = useState("");
 
   const buscarStatus = useCallback(async (silencioso = false) => {
     if (!silencioso) setAtualizando(true);
@@ -92,15 +94,23 @@ export default function ImpressoraPage() {
     e.preventDefault();
     setConectando(true);
     setErro("");
+    const body = precisaCodigo
+      ? { email, password: senha, verifyCode: codigo }
+      : { email, password: senha };
     const res = await fetch("/api/bambu/connect", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password: senha }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     setConectando(false);
     if (!res.ok) { setErro(data.erro || "Erro ao conectar"); return; }
-    setSenha(""); setEmail("");
+    if (data.needsCode) {
+      setPrecisaCodigo(true);
+      setCodigo("");
+      return;
+    }
+    setSenha(""); setEmail(""); setCodigo(""); setPrecisaCodigo(false);
     buscarStatus();
   }
 
@@ -157,25 +167,61 @@ export default function ImpressoraPage() {
           <hr style={{ borderColor: "rgba(255,255,255,0.06)" }} />
 
           <form onSubmit={conectar} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com" required className={inputCls} style={inputStyle}
-                onFocus={focusBorder} onBlur={blurBorder} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>Senha</label>
-              <div className="relative">
-                <input type={mostrarSenha ? "text" : "password"} value={senha} onChange={(e) => setSenha(e.target.value)}
-                  placeholder="••••••••" required className={`${inputCls} pr-10`} style={inputStyle}
-                  onFocus={focusBorder} onBlur={blurBorder} />
-                <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
-                  style={{ color: "rgba(255,255,255,0.3)" }}>
-                  {mostrarSenha ? <EyeOff size={15} /> : <Eye size={15} />}
+            {!precisaCodigo ? (
+              <>
+                <div>
+                  <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>Email</label>
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu@email.com" required className={inputCls} style={inputStyle}
+                    onFocus={focusBorder} onBlur={blurBorder} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>Senha</label>
+                  <div className="relative">
+                    <input type={mostrarSenha ? "text" : "password"} value={senha} onChange={(e) => setSenha(e.target.value)}
+                      placeholder="••••••••" required className={`${inputCls} pr-10`} style={inputStyle}
+                      onFocus={focusBorder} onBlur={blurBorder} />
+                    <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                      style={{ color: "rgba(255,255,255,0.3)" }}>
+                      {mostrarSenha ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl mb-4 text-xs"
+                  style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.2)", color: "#93C5FD" }}>
+                  <CheckCircle2 size={14} />
+                  Bambu enviou um código de 6 dígitos para <strong>{email}</strong>
+                </div>
+                <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  Código de verificação
+                </label>
+                <input
+                  type="text"
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="000000"
+                  required
+                  maxLength={6}
+                  className={`${inputCls} tracking-[0.5em] text-center text-lg font-bold`}
+                  style={inputStyle}
+                  onFocus={focusBorder}
+                  onBlur={blurBorder}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => { setPrecisaCodigo(false); setCodigo(""); setErro(""); }}
+                  className="mt-2 text-xs cursor-pointer"
+                  style={{ color: "rgba(255,255,255,0.3)" }}
+                >
+                  ← Voltar
                 </button>
               </div>
-            </div>
+            )}
 
             <AnimatePresence>
               {erro && (
@@ -187,16 +233,12 @@ export default function ImpressoraPage() {
               )}
             </AnimatePresence>
 
-            <button type="submit" disabled={conectando}
+            <button type="submit" disabled={conectando || (precisaCodigo && codigo.length < 6)}
               className="w-full py-2.5 text-white text-sm font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50"
               style={{ background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)", boxShadow: "0 4px 20px rgba(109,40,217,0.4)" }}>
-              {conectando ? "Conectando..." : "Conectar"}
+              {conectando ? "Verificando..." : precisaCodigo ? "Confirmar código" : "Conectar"}
             </button>
           </form>
-
-          <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.25)" }}>
-            Contas com 2FA não são suportadas ainda
-          </p>
         </div>
       ) : (
         <div className="space-y-4">

@@ -7,15 +7,20 @@ export async function POST(req: NextRequest) {
   const sessao = await getSessao();
   if (!sessao) return NextResponse.json({ erro: "Nao autorizado" }, { status: 401 });
 
-  const { email, password } = await req.json();
+  const { email, password, verifyCode } = await req.json();
   if (!email || !password) return NextResponse.json({ erro: "Email e senha obrigatorios" }, { status: 400 });
 
   try {
-    const { token, expIso } = await bambuLogin(email, password);
+    const result = await bambuLogin(email, password, verifyCode ?? undefined);
+
+    if (!result.ok) {
+      return NextResponse.json({ needsCode: true });
+    }
+
     await prisma.configuracao.upsert({
       where: { id: "global" },
-      update: { bambuEmail: email, bambuToken: token, bambuTokenExp: expIso },
-      create: { id: "global", bambuEmail: email, bambuToken: token, bambuTokenExp: expIso },
+      update: { bambuEmail: email, bambuToken: result.token, bambuTokenExp: result.expIso },
+      create: { id: "global", bambuEmail: email, bambuToken: result.token, bambuTokenExp: result.expIso },
     });
     return NextResponse.json({ ok: true });
   } catch (err) {
