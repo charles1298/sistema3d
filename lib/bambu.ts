@@ -30,11 +30,7 @@ export async function bambuLogin(
   try {
     res = await fetch(`${BASE}/v1/user-service/user/login`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "bambu-studio",
-        "Accept": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       signal: ctrl.signal,
     });
