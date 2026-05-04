@@ -22,14 +22,19 @@ export async function bambuLogin(
   const ctrl = new AbortController();
   const timeout = setTimeout(() => ctrl.abort(), 12_000);
 
-  const body: Record<string, string> = { account: email, password, apiError: "" };
-  if (verifyCode) body.verifyCode = verifyCode;
+  const body: Record<string, string> = verifyCode
+    ? { account: email, password, verifyCode, apiError: "" }
+    : { account: email, password, apiError: "" };
 
   let res: Response;
   try {
     res = await fetch(`${BASE}/v1/user-service/user/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "bambu-studio",
+        "Accept": "application/json",
+      },
       body: JSON.stringify(body),
       signal: ctrl.signal,
     });

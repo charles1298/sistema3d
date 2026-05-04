@@ -104,13 +104,17 @@ export default function ImpressoraPage() {
     });
     const data = await res.json();
     setConectando(false);
-    if (!res.ok) { setErro(data.erro || "Erro ao conectar"); return; }
+    if (!res.ok) {
+      setErro(data.erro || "Erro ao conectar");
+      return;
+    }
     if (data.needsCode) {
       setPrecisaCodigo(true);
       setCodigo("");
+      setErro("");
       return;
     }
-    setSenha(""); setEmail(""); setCodigo(""); setPrecisaCodigo(false);
+    setSenha(""); setEmail(""); setCodigo(""); setPrecisaCodigo(false); setErro("");
     buscarStatus();
   }
 
