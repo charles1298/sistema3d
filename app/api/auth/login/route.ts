@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { criarSessao } from "@/lib/auth";
-import bcrypt from "bcryptjs";
+import { compare } from "bcryptjs";
 import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ erro: "E-mail ou senha incorretos" }, { status: 401 });
   }
 
-  const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+  const senhaCorreta = await compare(senha, usuario.senha);
   if (!senhaCorreta) {
     return NextResponse.json({ erro: "E-mail ou senha incorretos" }, { status: 401 });
   }

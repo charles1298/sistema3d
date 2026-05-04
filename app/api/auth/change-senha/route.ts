@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessao } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   const sessao = await getSessao();
@@ -15,15 +15,20 @@ export async function POST(req: NextRequest) {
   if (novaSenha.length < 6)
     return NextResponse.json({ erro: "A nova senha deve ter pelo menos 6 caracteres" }, { status: 400 });
 
-  const usuario = await prisma.usuario.findUnique({ where: { id: sessao.id } });
-  if (!usuario) return NextResponse.json({ erro: "Usuário não encontrado" }, { status: 404 });
+  try {
+    const usuario = await prisma.usuario.findUnique({ where: { id: sessao.id } });
+    if (!usuario) return NextResponse.json({ erro: "Usuário não encontrado" }, { status: 404 });
 
-  const senhaCorreta = await bcrypt.compare(senhaAtual, usuario.senha);
-  if (!senhaCorreta)
-    return NextResponse.json({ erro: "Senha atual incorreta" }, { status: 400 });
+    const senhaCorreta = await compare(senhaAtual, usuario.senha);
+    if (!senhaCorreta)
+      return NextResponse.json({ erro: "Senha atual incorreta" }, { status: 400 });
 
-  const hash = await bcrypt.hash(novaSenha, 10);
-  await prisma.usuario.update({ where: { id: sessao.id }, data: { senha: hash } });
+    const novoHash = await hash(novaSenha, 10);
+    await prisma.usuario.update({ where: { id: sessao.id }, data: { senha: novoHash } });
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("change-senha:", err);
+    return NextResponse.json({ erro: "Erro interno ao alterar senha" }, { status: 500 });
+  }
 }

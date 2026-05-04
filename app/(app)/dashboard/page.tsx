@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSessao } from "@/lib/auth";
 import { FolderOpen, CheckCircle2, Clock, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import DashboardCharts from "@/components/DashboardCharts";
 
 export default async function DashboardPage() {
@@ -71,10 +72,10 @@ export default async function DashboardPage() {
   // ── Static UI ────────────────────────────────────────────────────────────────
 
   const stats = [
-    { label: "Total de Projetos", valor: String(totalProjetos), icon: FolderOpen, cor: "#A78BFA" },
-    { label: "Rascunho", valor: String(totalRascunho), icon: Clock, cor: "#FCD34D" },
-    { label: "Produzido", valor: String(totalProduzido), icon: CheckCircle2, cor: "#34D399" },
-    { label: "Receita Projetada", valor: brl(receitaProjetada._sum.precoVenda ?? 0), icon: TrendingUp, cor: "#60A5FA" },
+    { label: "Total de Projetos", valor: String(totalProjetos), icon: FolderOpen, cor: "#A78BFA", href: "/projetos" },
+    { label: "Rascunho", valor: String(totalRascunho), icon: Clock, cor: "#FCD34D", href: "/projetos?status=rascunho" },
+    { label: "Produzido", valor: String(totalProduzido), icon: CheckCircle2, cor: "#34D399", href: "/projetos?status=produzido" },
+    { label: "Receita Projetada", valor: brl(receitaProjetada._sum.precoVenda ?? 0), icon: TrendingUp, cor: "#60A5FA", href: "/precificacao" },
   ];
 
   const statusCfg: Record<string, { label: string; bg: string; text: string; border: string }> = {
@@ -96,9 +97,10 @@ export default async function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((s) => (
-          <div
+          <Link
             key={s.label}
-            className="rounded-2xl p-4 md:p-5 transition-all duration-200 hover:scale-[1.02]"
+            href={s.href}
+            className="rounded-2xl p-4 md:p-5 transition-all duration-200 hover:scale-[1.02] hover:brightness-110 cursor-pointer block"
             style={{
               background: "rgba(255,255,255,0.04)",
               border: `1px solid rgba(255,255,255,0.08)`,
@@ -112,7 +114,7 @@ export default async function DashboardPage() {
             </div>
             <p className="text-2xl md:text-3xl font-bold text-white tracking-tight">{s.valor}</p>
             <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>{s.label}</p>
-          </div>
+          </Link>
         ))}
       </div>
 

@@ -11,24 +11,42 @@ export type BambuDevice = {
 };
 
 export async function bambuLogin(email: string, password: string): Promise<{ token: string; expIso: string }> {
-  const res = await fetch(`${BASE}/v1/user-service/user/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ account: email, password, apiError: "" }),
-  });
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 12_000);
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}/v1/user-service/user/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ account: email, password, apiError: "" }),
+      signal: ctrl.signal,
+    });
+  } catch (err: unknown) {
+    clearTimeout(timeout);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("abort") || msg.includes("Abort")) throw new Error("Timeout ao conectar com Bambu Lab");
+    throw new Error(`Erro de conexão: ${msg}`);
+  }
+  clearTimeout(timeout);
+
+  let data: Record<string, unknown> = {};
+  try { data = await res.json(); } catch { /* empty body */ }
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    const msg = (data.message ?? data.error ?? data.msg ?? `HTTP ${res.status}`) as string;
+    throw new Error(String(msg));
   }
 
-  const data = await res.json();
-  if (!data.accessToken && !data.token) {
-    throw new Error(data.message || data.error || "Login falhou");
+  if (data.loginType === "verifyCode") {
+    throw new Error("Bambu enviou um código de verificação para seu e-mail. Contas com verificação em duas etapas não são suportadas pelo monitor automático.");
   }
 
-  const token: string = data.accessToken ?? data.token;
-  // Bambu tokens last ~30 days; store expiry as ISO string
+  const token = (data.accessToken ?? data.token) as string | undefined;
+  if (!token) {
+    throw new Error(String(data.message ?? data.error ?? "Login falhou — resposta inesperada da Bambu Lab"));
+  }
+
   const exp = new Date(Date.now() + 29 * 24 * 60 * 60 * 1000).toISOString();
   return { token, expIso: exp };
 }
