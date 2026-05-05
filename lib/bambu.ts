@@ -60,14 +60,7 @@ export async function bambuLogin(
   }
 
   if (data.loginType === "verifyCode") {
-    if (!verifyCode) {
-      const emailRes = await fetch(`${BASE}/v1/user-service/user/sendemail/code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, codeType: "verifyCode" }),
-      }).catch(() => null);
-      console.log("[BAMBU] sendemail status:", emailRes?.status ?? "fetch failed");
-    }
+    // Login auto-envia o código — não chamar sendemail separado
     return { ok: false, needsCode: true };
   }
 
