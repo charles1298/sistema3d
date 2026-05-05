@@ -12,7 +12,7 @@ export type BambuDevice = {
 
 export type BambuLoginResult =
   | { ok: true; token: string; expIso: string }
-  | { ok: false; needsCode: true };
+  | { ok: false; needsCode: true; debugData?: string };
 
 export async function bambuLogin(
   email: string,
@@ -60,8 +60,7 @@ export async function bambuLogin(
   }
 
   if (data.loginType === "verifyCode") {
-    // Login auto-envia o código — não chamar sendemail separado
-    return { ok: false, needsCode: true };
+    return { ok: false, needsCode: true, debugData: JSON.stringify(data) };
   }
 
   throw new Error(String(data.message ?? data.error ?? "Login falhou — resposta inesperada da Bambu Lab"));

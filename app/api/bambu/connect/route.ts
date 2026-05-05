@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     if (!result.ok) {
       // Se já enviou código mas a API continua pedindo, o código foi rejeitado
       if (verifyCode) {
-        return NextResponse.json({ erro: "Código incorreto ou expirado. Verifique seu e-mail e tente novamente." }, { status: 400 });
+        return NextResponse.json({ erro: `DEBUG Bambu: ${result.debugData ?? "sem dados"}` }, { status: 400 });
       }
       return NextResponse.json({ needsCode: true });
     }
