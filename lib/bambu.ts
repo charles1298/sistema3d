@@ -45,34 +45,33 @@ export async function bambuLogin(
   let data: Record<string, unknown> = {};
   try { data = await res.json(); } catch { /* empty body */ }
 
+  console.log("[BAMBU] status:", res.status, "body:", JSON.stringify(data));
+
   if (!res.ok) {
     const msg = (data.message ?? data.error ?? data.msg ?? `HTTP ${res.status}`) as string;
     throw new Error(String(msg));
   }
 
+  // Verifica token ANTES de checar loginType — Bambu pode retornar ambos
+  const token = (data.accessToken ?? data.token) as string | undefined;
+  if (token) {
+    const exp = new Date(Date.now() + 29 * 24 * 60 * 60 * 1000).toISOString();
+    return { ok: true, token, expIso: exp };
+  }
+
   if (data.loginType === "verifyCode") {
     if (!verifyCode) {
-      // Só envia o e-mail na primeira vez (sem código ainda)
       const emailRes = await fetch(`${BASE}/v1/user-service/user/sendemail/code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, codeType: "verifyCode" }),
       }).catch(() => null);
       console.log("[BAMBU] sendemail status:", emailRes?.status ?? "fetch failed");
-    } else {
-      // Log da resposta ao submeter o código para diagnóstico
-      console.log("[BAMBU] submitCode response:", JSON.stringify(data));
     }
     return { ok: false, needsCode: true };
   }
 
-  const token = (data.accessToken ?? data.token) as string | undefined;
-  if (!token) {
-    throw new Error(String(data.message ?? data.error ?? "Login falhou — resposta inesperada da Bambu Lab"));
-  }
-
-  const exp = new Date(Date.now() + 29 * 24 * 60 * 60 * 1000).toISOString();
-  return { ok: true, token, expIso: exp };
+  throw new Error(String(data.message ?? data.error ?? "Login falhou — resposta inesperada da Bambu Lab"));
 }
 
 export async function bambuGetDevices(token: string): Promise<BambuDevice[]> {
