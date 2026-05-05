@@ -29,6 +29,8 @@ export async function bambuLogin(
     : { account: email, password, apiError: "" };
 
   const headers: Record<string, string> = { "Content-Type": "application/json" };
+  // User-Agent do cliente oficial é necessário para a Bambu processar o verifyCode
+  if (verifyCode) headers["User-Agent"] = "bambu-studio";
   if (sessionCookie) headers["Cookie"] = sessionCookie;
 
   let res: Response;
