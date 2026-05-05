@@ -23,8 +23,9 @@ export async function bambuLogin(
   const ctrl = new AbortController();
   const timeout = setTimeout(() => ctrl.abort(), 12_000);
 
+  // Com verifyCode: corpo mínimo sem apiError (apiError reinicia o fluxo)
   const body: Record<string, string> = verifyCode
-    ? { account: email, password, apiError: "", verifyCode }
+    ? { account: email, password, verifyCode }
     : { account: email, password, apiError: "" };
 
   const headers: Record<string, string> = { "Content-Type": "application/json" };
