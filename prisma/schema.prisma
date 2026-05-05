@@ -99,9 +99,10 @@ model Configuracao {
   vidaUtilHoras   Float   @default(5000)
   custoManutencao Float   @default(0.32)
   margemLucro     Float   @default(40)
-  bambuEmail      String?
-  bambuToken      String?
-  bambuTokenExp   String?
+  bambuEmail         String?
+  bambuToken         String?
+  bambuTokenExp      String?
+  bambuSessionCookie String?
 }
 
 model Material {

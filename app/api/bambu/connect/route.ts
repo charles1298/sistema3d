@@ -11,14 +11,23 @@ export async function POST(req: NextRequest) {
   if (!email || !password) return NextResponse.json({ erro: "Email e senha obrigatorios" }, { status: 400 });
 
   try {
-    const result = await bambuLogin(email, password, verifyCode ?? undefined);
+    // Recupera cookie de sessão salvo do login inicial, se existir
+    const cfg = await prisma.configuracao.findUnique({ where: { id: "global" } });
+    const sessionCookie = cfg?.bambuSessionCookie ?? undefined;
+
+    const result = await bambuLogin(email, password, verifyCode ?? undefined, sessionCookie);
 
     if (!result.ok) {
-      // Se já enviou código mas a API continua pedindo, o código foi rejeitado
-      if (verifyCode) {
-        return NextResponse.json({ erro: `DEBUG Bambu: ${result.debugData ?? "sem dados"}` }, { status: 400 });
+      if (!verifyCode) {
+        // Salva o cookie de sessão para usar na verificação do código
+        await prisma.configuracao.upsert({
+          where: { id: "global" },
+          update: { bambuSessionCookie: result.sessionCookie ?? null },
+          create: { id: "global", bambuSessionCookie: result.sessionCookie ?? null },
+        });
+        return NextResponse.json({ needsCode: true });
       }
-      return NextResponse.json({ needsCode: true });
+      return NextResponse.json({ erro: `DEBUG Bambu: ${result.debugData ?? "sem dados"}` }, { status: 400 });
     }
 
     await prisma.configuracao.upsert({
