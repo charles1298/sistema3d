@@ -22,8 +22,8 @@ export async function bambuLogin(
   const ctrl = new AbortController();
   const timeout = setTimeout(() => ctrl.abort(), 12_000);
 
-  const body: Record<string, string> = verifyCode
-    ? { account: email, password, verifyCode, apiError: "" }
+  const body: Record<string, string | number> = verifyCode
+    ? { account: email, password, verifyCode, tfaKey: "", apiError: "" }
     : { account: email, password, apiError: "" };
 
   let res: Response;
