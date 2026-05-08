@@ -11,28 +11,42 @@ export async function POST(req: NextRequest) {
   if (!email || !password) return NextResponse.json({ erro: "Email e senha obrigatorios" }, { status: 400 });
 
   try {
-    // Recupera cookie de sessão salvo do login inicial, se existir
+    // Recupera cookie de sessão e tfaKey salvos do login inicial
     const cfg = await prisma.configuracao.findUnique({ where: { id: "global" } });
     const sessionCookie = cfg?.bambuSessionCookie ?? undefined;
+    const savedTfaKey = cfg?.bambuTfaKey ?? undefined;
 
-    const result = await bambuLogin(email, password, verifyCode ?? undefined, sessionCookie);
+    const result = await bambuLogin(email, password, verifyCode ?? undefined, sessionCookie, savedTfaKey);
 
     if (!result.ok) {
       if (!verifyCode) {
-        // Salva o cookie de sessão para usar na verificação do código
+        // Salva cookie e tfaKey para usar na verificação do código
         await prisma.configuracao.upsert({
           where: { id: "global" },
-          update: { bambuSessionCookie: result.sessionCookie ?? null },
-          create: { id: "global", bambuSessionCookie: result.sessionCookie ?? null },
+          update: {
+            bambuSessionCookie: result.sessionCookie ?? null,
+            bambuTfaKey: result.tfaKey ?? null,
+          },
+          create: {
+            id: "global",
+            bambuSessionCookie: result.sessionCookie ?? null,
+            bambuTfaKey: result.tfaKey ?? null,
+          },
         });
         return NextResponse.json({ needsCode: true });
       }
-      return NextResponse.json({ erro: `DEBUG Bambu: ${result.debugData ?? "sem dados"}` }, { status: 400 });
+      return NextResponse.json({ erro: `Código inválido ou expirado. Tente novamente.` }, { status: 400 });
     }
 
     await prisma.configuracao.upsert({
       where: { id: "global" },
-      update: { bambuEmail: email, bambuToken: result.token, bambuTokenExp: result.expIso },
+      update: {
+        bambuEmail: email,
+        bambuToken: result.token,
+        bambuTokenExp: result.expIso,
+        bambuSessionCookie: null,
+        bambuTfaKey: null,
+      },
       create: { id: "global", bambuEmail: email, bambuToken: result.token, bambuTokenExp: result.expIso },
     });
     return NextResponse.json({ ok: true });

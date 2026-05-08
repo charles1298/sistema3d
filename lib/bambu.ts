@@ -12,25 +12,27 @@ export type BambuDevice = {
 
 export type BambuLoginResult =
   | { ok: true; token: string; expIso: string }
-  | { ok: false; needsCode: true; sessionCookie?: string; debugData?: string };
+  | { ok: false; needsCode: true; sessionCookie?: string; tfaKey?: string; debugData?: string };
 
 export async function bambuLogin(
   email: string,
   password: string,
   verifyCode?: string,
   sessionCookie?: string,
+  tfaKey?: string,
 ): Promise<BambuLoginResult> {
   const ctrl = new AbortController();
   const timeout = setTimeout(() => ctrl.abort(), 12_000);
 
-  // Com verifyCode: corpo mínimo sem apiError (apiError reinicia o fluxo)
+  // Corpo da requisição: "code" é o campo correto (não "verifyCode")
   const body: Record<string, string> = verifyCode
-    ? { account: email, password, verifyCode }
-    : { account: email, password, apiError: "" };
+    ? { account: email, password, code: verifyCode, ...(tfaKey ? { tfaKey } : {}) }
+    : { account: email, password };
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  // User-Agent do cliente oficial é necessário para a Bambu processar o verifyCode
-  if (verifyCode) headers["User-Agent"] = "bambu-studio";
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "User-Agent": "bambu_network_agent/01.09.05.01",
+  };
   if (sessionCookie) headers["Cookie"] = sessionCookie;
 
   let res: Response;
@@ -68,7 +70,13 @@ export async function bambuLogin(
   }
 
   if (data.loginType === "verifyCode") {
-    return { ok: false, needsCode: true, sessionCookie: cookies ?? undefined, debugData: JSON.stringify(data) };
+    return {
+      ok: false,
+      needsCode: true,
+      sessionCookie: cookies ?? undefined,
+      tfaKey: (data.tfaKey as string | undefined) ?? undefined,
+      debugData: JSON.stringify(data),
+    };
   }
 
   throw new Error(String(data.message ?? data.error ?? "Login falhou — resposta inesperada da Bambu Lab"));

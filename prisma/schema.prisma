@@ -103,6 +103,7 @@ model Configuracao {
   bambuToken         String?
   bambuTokenExp      String?
   bambuSessionCookie String?
+  bambuTfaKey        String?
 }
 
 model Material {
