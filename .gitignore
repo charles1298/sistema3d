@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# SQLite local dev database — NUNCA commitar (causa perda de dados em produção)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal

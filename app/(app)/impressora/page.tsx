@@ -2,7 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Printer, Wifi, WifiOff, RefreshCw, LogOut, Eye, EyeOff, CheckCircle2, AlertCircle, Clock, Zap } from "lucide-react";
+import {
+  Printer, Wifi, WifiOff, RefreshCw, LogOut, Eye, EyeOff,
+  CheckCircle2, AlertCircle, Clock, Zap, FolderOpen, FileText,
+  ChevronDown, ChevronRight,
+} from "lucide-react";
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type Device = {
   dev_id: string;
@@ -13,6 +19,23 @@ type Device = {
   dev_product_name?: string;
 };
 
+type BambuProject = {
+  project_id: string;
+  name: string;
+  status: string;
+  create_time: string;
+  update_time: string;
+  cover?: string;
+};
+
+type BambuFile = {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  create_time: string;
+};
+
 type StatusResponse = {
   conectado: boolean;
   email?: string;
@@ -20,6 +43,15 @@ type StatusResponse = {
   erro?: string;
   dispositivos: Device[];
 };
+
+type ProjectsResponse = {
+  conectado: boolean;
+  expirado?: boolean;
+  erro?: string;
+  projetos: BambuProject[];
+};
+
+// ─── Constantes visuais ───────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<string, { text: string; bg: string; border: string }> = {
   IDLE:     { text: "#A78BFA", bg: "rgba(124,58,237,0.1)",  border: "rgba(124,58,237,0.3)"  },
@@ -58,8 +90,96 @@ function blurBorder(e: React.FocusEvent<HTMLInputElement>) {
   e.target.style.boxShadow = "none";
 }
 
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ─── Sub-componente: Arquivos de um projeto ───────────────────────────────────
+
+function ProjetoArquivos({ projectId }: { projectId: string }) {
+  const [files, setFiles] = useState<BambuFile[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    fetch(`/api/bambu/projects/${projectId}/files`)
+      .then((r) => r.json())
+      .then((d) => { setFiles(d.files ?? []); setErro(d.erro ?? ""); })
+      .catch(() => setErro("Falha ao carregar arquivos"))
+      .finally(() => setCarregando(false));
+  }, [projectId]);
+
+  if (carregando) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-3 text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <div className="w-3 h-3 border border-violet-400 border-t-transparent rounded-full animate-spin" />
+        Carregando arquivos...
+      </div>
+    );
+  }
+
+  if (erro) {
+    return <p className="px-4 py-2 text-xs" style={{ color: "#F87171" }}>{erro}</p>;
+  }
+
+  if (files.length === 0) {
+    return <p className="px-4 py-2 text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Nenhum arquivo neste projeto</p>;
+  }
+
+  return (
+    <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+      {files.map((f) => (
+        <div key={f.id} className="flex items-center gap-3 px-4 py-2">
+          <FileText size={13} style={{ color: f.name.endsWith(".3mf") ? "#A78BFA" : "rgba(255,255,255,0.3)" }} />
+          <span className="text-xs text-white flex-1 truncate">{f.name}</span>
+          <span className="text-xs shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>{formatBytes(f.size)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Sub-componente: Card de projeto ─────────────────────────────────────────
+
+function ProjetoCard({ projeto }: { projeto: BambuProject }) {
+  const [aberto, setAberto] = useState(false);
+
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ ...card, border: "1px solid rgba(255,255,255,0.08)" }}>
+      <button
+        onClick={() => setAberto(!aberto)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left cursor-pointer transition-all hover:bg-white/5"
+      >
+        <FolderOpen size={15} style={{ color: "#A78BFA", flexShrink: 0 }} />
+        <span className="flex-1 text-sm text-white truncate font-medium">{projeto.name}</span>
+        <span className="text-xs shrink-0 mr-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+          {new Date(projeto.create_time).toLocaleDateString("pt-BR")}
+        </span>
+        {aberto ? <ChevronDown size={14} style={{ color: "rgba(255,255,255,0.4)", flexShrink: 0 }} /> : <ChevronRight size={14} style={{ color: "rgba(255,255,255,0.4)", flexShrink: 0 }} />}
+      </button>
+      <AnimatePresence>
+        {aberto && (
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
+            style={{ overflow: "hidden", borderTop: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            <ProjetoArquivos projectId={projeto.project_id} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Página principal ─────────────────────────────────────────────────────────
+
 export default function ImpressoraPage() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
+  const [projetos, setProjetos] = useState<BambuProject[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [email, setEmail] = useState("");
@@ -70,13 +190,20 @@ export default function ImpressoraPage() {
   const [ultimaAtt, setUltimaAtt] = useState<Date | null>(null);
   const [precisaCodigo, setPrecisaCodigo] = useState(false);
   const [codigo, setCodigo] = useState("");
+  const [abaAtiva, setAbaAtiva] = useState<"impressoras" | "projetos">("impressoras");
 
-  const buscarStatus = useCallback(async (silencioso = false) => {
+  const buscarTudo = useCallback(async (silencioso = false) => {
     if (!silencioso) setAtualizando(true);
     try {
-      const res = await fetch("/api/bambu/status");
-      const data = await res.json();
-      setStatus(data);
+      const [resStatus, resProjetos] = await Promise.all([
+        fetch("/api/bambu/status"),
+        fetch("/api/bambu/projects"),
+      ]);
+      const dataStatus: StatusResponse = await resStatus.json();
+      const dataProjetos: ProjectsResponse = await resProjetos.json();
+
+      setStatus(dataStatus);
+      setProjetos(dataProjetos.projetos ?? []);
       setUltimaAtt(new Date());
     } finally {
       setCarregando(false);
@@ -85,10 +212,10 @@ export default function ImpressoraPage() {
   }, []);
 
   useEffect(() => {
-    buscarStatus();
-    const interval = setInterval(() => buscarStatus(true), 30_000);
+    buscarTudo();
+    const interval = setInterval(() => buscarTudo(true), 30_000);
     return () => clearInterval(interval);
-  }, [buscarStatus]);
+  }, [buscarTudo]);
 
   async function conectar(e: React.FormEvent) {
     e.preventDefault();
@@ -104,24 +231,16 @@ export default function ImpressoraPage() {
     });
     const data = await res.json();
     setConectando(false);
-    if (!res.ok) {
-      setErro(data.erro || "Erro ao conectar");
-      return;
-    }
-    if (data.needsCode) {
-      setPrecisaCodigo(true);
-      setCodigo("");
-      setErro("");
-      return;
-    }
+    if (!res.ok) { setErro(data.erro || "Erro ao conectar"); return; }
+    if (data.needsCode) { setPrecisaCodigo(true); setCodigo(""); setErro(""); return; }
     setSenha(""); setEmail(""); setCodigo(""); setPrecisaCodigo(false); setErro("");
-    buscarStatus();
+    buscarTudo();
   }
 
   async function desconectar() {
     if (!confirm("Desconectar da Bambu Lab?")) return;
     await fetch("/api/bambu/connect", { method: "DELETE" });
-    buscarStatus();
+    buscarTudo();
   }
 
   if (carregando) {
@@ -134,6 +253,7 @@ export default function ImpressoraPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
+      {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Impressora</h1>
@@ -143,7 +263,7 @@ export default function ImpressoraPage() {
         </div>
         {status?.conectado && (
           <button
-            onClick={() => buscarStatus()}
+            onClick={() => buscarTudo()}
             disabled={atualizando}
             className="flex items-center gap-2 px-3 py-2 text-sm rounded-xl transition-all cursor-pointer disabled:opacity-50"
             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
@@ -154,6 +274,7 @@ export default function ImpressoraPage() {
         )}
       </div>
 
+      {/* Formulário de login */}
       {!status?.conectado ? (
         <div className="rounded-2xl p-6 space-y-5 max-w-md" style={card}>
           <div className="flex items-center gap-3">
@@ -246,7 +367,7 @@ export default function ImpressoraPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Connection header */}
+          {/* Barra de conexão */}
           <div className="rounded-2xl px-5 py-4 flex items-center justify-between gap-4 flex-wrap" style={card}>
             <div className="flex items-center gap-3">
               <div className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_#34D399]" />
@@ -268,66 +389,98 @@ export default function ImpressoraPage() {
             </button>
           </div>
 
-          {/* Devices */}
-          {status.dispositivos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 rounded-2xl" style={card}>
-              <Printer size={36} className="mb-3" style={{ color: "rgba(255,255,255,0.15)" }} />
-              <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>Nenhuma impressora encontrada na conta</p>
-              <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>Verifique se sua impressora está vinculada ao Bambu Handy</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {status.dispositivos.map((dev) => {
-                const statusKey = (dev.print_status ?? "IDLE").toUpperCase();
-                const sc = STATUS_COLORS[statusKey] ?? STATUS_COLORS.IDLE;
-                const label = STATUS_LABELS[statusKey] ?? dev.print_status;
-                return (
-                  <motion.div key={dev.dev_id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                    className="rounded-2xl p-5 space-y-4" style={{ ...card, boxShadow: "0 4px 24px rgba(0,0,0,0.3)" }}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: "rgba(124,58,237,0.2)", border: "1px solid rgba(124,58,237,0.25)" }}>
-                          <Printer size={18} style={{ color: "#A78BFA" }} />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-white text-sm">{dev.name}</p>
-                          <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-                            {dev.dev_product_name ?? "Bambu Lab"}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full shrink-0"
-                        style={{ backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
-                        {statusKey === "RUNNING" ? <Zap size={11} /> : statusKey === "FAILED" ? <AlertCircle size={11} /> : <Clock size={11} />}
-                        {label}
-                      </span>
-                    </div>
+          {/* Abas: Impressoras | Projetos */}
+          <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            {(["impressoras", "projetos"] as const).map((aba) => (
+              <button
+                key={aba}
+                onClick={() => setAbaAtiva(aba)}
+                className="flex-1 py-2 text-xs font-semibold rounded-lg capitalize transition-all cursor-pointer"
+                style={abaAtiva === aba
+                  ? { background: "rgba(124,58,237,0.3)", color: "#C4B5FD", border: "1px solid rgba(124,58,237,0.4)" }
+                  : { color: "rgba(255,255,255,0.4)", border: "1px solid transparent" }}
+              >
+                {aba === "impressoras" ? `Impressoras (${status.dispositivos.length})` : `Projetos (${projetos.length})`}
+              </button>
+            ))}
+          </div>
 
-                    <div className="flex items-center gap-4 pt-3"
-                      style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                      <div className="flex items-center gap-2">
-                        {dev.online
-                          ? <Wifi size={14} style={{ color: "#34D399" }} />
-                          : <WifiOff size={14} style={{ color: "rgba(255,255,255,0.3)" }} />}
-                        <span className="text-xs" style={{ color: dev.online ? "#34D399" : "rgba(255,255,255,0.3)" }}>
-                          {dev.online ? "Online" : "Offline"}
-                        </span>
-                      </div>
-                      {dev.nozzle_diameter && (
-                        <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-                          Bico Ø{dev.nozzle_diameter}mm
-                        </span>
-                      )}
-                      {statusKey === "RUNNING" && (
-                        <span className="flex items-center gap-1 text-xs ml-auto" style={{ color: "#34D399" }}>
-                          <CheckCircle2 size={12} /> Em impressão
-                        </span>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
+          {/* Aba: Impressoras */}
+          {abaAtiva === "impressoras" && (
+            <>
+              {status.dispositivos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 rounded-2xl" style={card}>
+                  <Printer size={36} className="mb-3" style={{ color: "rgba(255,255,255,0.15)" }} />
+                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>Nenhuma impressora encontrada na conta</p>
+                  <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>Verifique se sua impressora está vinculada ao Bambu Handy</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {status.dispositivos.map((dev) => {
+                    const statusKey = (dev.print_status ?? "IDLE").toUpperCase();
+                    const sc = STATUS_COLORS[statusKey] ?? STATUS_COLORS.IDLE;
+                    const label = STATUS_LABELS[statusKey] ?? dev.print_status;
+                    return (
+                      <motion.div key={dev.dev_id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                        className="rounded-2xl p-5 space-y-4" style={{ ...card, boxShadow: "0 4px 24px rgba(0,0,0,0.3)" }}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                              style={{ background: "rgba(124,58,237,0.2)", border: "1px solid rgba(124,58,237,0.25)" }}>
+                              <Printer size={18} style={{ color: "#A78BFA" }} />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-white text-sm">{dev.name}</p>
+                              <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                                {dev.dev_product_name ?? "Bambu Lab"}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full shrink-0"
+                            style={{ backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
+                            {statusKey === "RUNNING" ? <Zap size={11} /> : statusKey === "FAILED" ? <AlertCircle size={11} /> : <Clock size={11} />}
+                            {label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div className="flex items-center gap-2">
+                            {dev.online
+                              ? <Wifi size={14} style={{ color: "#34D399" }} />
+                              : <WifiOff size={14} style={{ color: "rgba(255,255,255,0.3)" }} />}
+                            <span className="text-xs" style={{ color: dev.online ? "#34D399" : "rgba(255,255,255,0.3)" }}>
+                              {dev.online ? "Online" : "Offline"}
+                            </span>
+                          </div>
+                          {dev.nozzle_diameter && (
+                            <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                              Bico Ø{dev.nozzle_diameter}mm
+                            </span>
+                          )}
+                          {statusKey === "RUNNING" && (
+                            <span className="flex items-center gap-1 text-xs ml-auto" style={{ color: "#34D399" }}>
+                              <CheckCircle2 size={12} /> Em impressão
+                            </span>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Aba: Projetos Bambu Cloud */}
+          {abaAtiva === "projetos" && (
+            <div className="space-y-2">
+              {projetos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 rounded-2xl" style={card}>
+                  <FolderOpen size={36} className="mb-3" style={{ color: "rgba(255,255,255,0.15)" }} />
+                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>Nenhum projeto encontrado na conta Bambu</p>
+                </div>
+              ) : (
+                projetos.map((p) => <ProjetoCard key={p.project_id} projeto={p} />)
+              )}
             </div>
           )}
 
